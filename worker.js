@@ -58,10 +58,10 @@ function readAndWork () {
 
         getAllPeopleInAList(listId, function (err, results) {
             console.log('in getAllPeopleInAList callback');
+            if (err) throw new Error(err);
 
             var i, people = results.people;
 
-            if (err) throw new Error(err);
 
             for (i = 0; i < people.length; i++) {
  
