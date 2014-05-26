@@ -69,11 +69,13 @@ function readAndWork () {
                 //typeof personId = string
                 //=> must parse string to int
                 if (people[i].personId === parseInt(personId, 10)) {
-                    return console.log('isInList = TRUE');
+                    console.log('isInList = TRUE');
+                    return setTimeout(readAndWork, 10000);
                 }
             } 
 
-            return console.log('isInList = FALSE');
+            console.log('isInList = FALSE');
+            return setTimeout(readAndWork, 10000);
         });
 
         //setTimeout(readAndWork, 5000);
