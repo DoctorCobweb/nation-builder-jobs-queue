@@ -84,7 +84,7 @@ function readAndWork () {
 
 
 function getAllPeopleInAList(listId, cb) {
-    var perPage = 1000,
+    var perPage = 100,
         allPeopleArray = [], //holds all of the people in a list 
         totalPages,
         totalNumberOfPeople,
@@ -197,7 +197,7 @@ function getAllPeopleInAList(listId, cb) {
     
     function errorCb(error) {
         console.log('error: ' + error);
-        return cb(error);
+        return cb({'error': error}, null);
     }
     
     
@@ -236,6 +236,7 @@ function downloadAllAsync(urls, onsuccess, onerror) {
         	    } 
                 }
             }, function (error) {
+                console.log('downloadAsync error function. error: ' + error);
         	if (result) {
                     result = null;
         	    onerror(error);
@@ -256,10 +257,12 @@ function downloadAsync(url_, successCb, errorCb) {
     };
 
     function callbackIndividual(error, response, body) {
+        console.log('callbackIndividual');
 	if (!error && response.statusCode == 200) {
 	    var bodyObj = JSON.parse(body);
 	    return successCb(bodyObj);
 	} else {
+            console.log('error in callbackIndividual: ' + error);
 	    return errorCb(error);
 	}
     }
