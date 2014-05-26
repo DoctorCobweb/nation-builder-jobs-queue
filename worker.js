@@ -84,7 +84,7 @@ function readAndWork () {
 
 
 function getAllPeopleInAList(listId, cb) {
-    var perPage = 150, //seems to be the sweet spot to avoid resp timeouts
+    var perPage = 100, //seems to be the sweet spot to avoid resp timeouts
         allPeopleArray = [], //holds all of the people in a list 
         totalPages,
         totalNumberOfPeople,
