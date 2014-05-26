@@ -46,6 +46,46 @@ var JobsModel = conn.model('Job', Jobs);
 function readAndWork () {
     console.log('readAndWork function');
 
+    var query = JobsModel
+                  .find({})
+                  .sort('timeAdded');
+
+    query.exec(function (err, jobs) {
+        console.log('in exec cb');
+
+        if (err) throw new Error(err);
+
+        console.log('GOT JOBS TODO FROM QUERY...');
+        console.log(jobs);
+
+        //for now just use the first model in array
+        var personId = jobs[0].personId,
+            listId   = jobs[0].listId;
+
+        getAllPeopleInAList(listId, function (err, results) {
+            console.log('in getAllPeopleInAList callback');
+            if (err) throw new Error(err);
+
+            var i, people = results.people;
+
+
+            for (i = 0; i < people.length; i++) {
+ 
+                //typeof people[i].personId = number
+                //typeof personId = string
+                //=> must parse string to int
+                if (people[i].personId === parseInt(personId, 10)) {
+                    console.log('isInList = TRUE');
+                    return setTimeout(readAndWork, 10000);
+                }
+            } 
+
+            console.log('isInList = FALSE');
+            return setTimeout(readAndWork, 10000);
+        });
+    });
+
+    /*
     JobsModel.find({}, function (err, jobs) {
         if (err) throw new Error(err);
 
@@ -80,11 +120,12 @@ function readAndWork () {
 
         //setTimeout(readAndWork, 5000);
     });
+    */
 }
 
 
 function getAllPeopleInAList(listId, cb) {
-    var perPage = 50, //seems to be the sweet spot to avoid resp timeouts
+    var perPage = 100, //seems to be the sweet spot to avoid resp timeouts
         allPeopleArray = [], //holds all of the people in a list 
         totalPages,
         totalNumberOfPeople,
