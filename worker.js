@@ -17,7 +17,7 @@ var conn = mongoose.connect(mongoUri, function (err, res) {
 });
 
 
-var Jobs = new mongoose.Schema({
+var Jobs = new mongoose.Schema(
     {
         jobType: String,
         httpMethod: String,
