@@ -96,11 +96,11 @@ function handleResult(job, result) {
   
     if(personInList) {
 
-        if (httpMethod === "post") {
+        if (httpMethod === "POST") {
             return;
         }
 
-        if (httpMethod === "delete") {
+        if (httpMethod === "DELETE") {
             //call NB DELETE /lists/:list_id/listings/:person_id 
 
             var optionsDelete = {
@@ -136,7 +136,7 @@ function handleResult(job, result) {
     } else {
         //person is NOT in list
 
-        if (httpMethod === "post") {
+        if (httpMethod === "POST") {
             //call NB POST /lists/:list_id/listings/ 
 
             var postBody = {"listing": {"person_id": job.personId} };
@@ -175,7 +175,7 @@ function handleResult(job, result) {
         }
 
 
-        if (httpMethod === "delete") {
+        if (httpMethod === "DELETE") {
             return;
         }
     }
