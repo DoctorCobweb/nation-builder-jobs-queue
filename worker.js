@@ -148,7 +148,7 @@ function handleResult(job, result) {
         	    'Content-Type': 'application/json',
         	    'Accept': 'application/json'
         	},
-        	body: postBody,
+        	json: postBody,
             };
         
             function cbPostIndividual(error, response, body) {
