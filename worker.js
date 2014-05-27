@@ -47,8 +47,8 @@ function readAndWork () {
     console.log('readAndWork function');
 
     var query = JobsModel
-                  .find({})
-                  .sort('timeAdded');
+                  .find({});
+                  //.sort('timeAdded'); //capped collections are naturally ordered
 
     query.exec(function (err, jobs) {
         console.log('in exec cb');
@@ -59,74 +59,23 @@ function readAndWork () {
         console.log(jobs);
 
         //for now just use the first model in array
-        var personId = jobs[0].personId,
+        var personId = parseInt(jobs[0].personId, 10),
             listId   = jobs[0].listId;
 
-        getAllPeopleInAList(listId, function (err, results) {
+        getAllPeopleInAList(listId, personId, function (err, result) {
             console.log('in getAllPeopleInAList callback');
             if (err) throw new Error(err);
 
-            var i, people = results.people;
-
-
-            for (i = 0; i < people.length; i++) {
- 
-                //typeof people[i].personId = number
-                //typeof personId = string
-                //=> must parse string to int
-                if (people[i].personId === parseInt(personId, 10)) {
-                    console.log('isInList = TRUE');
-                    return setTimeout(readAndWork, 10000);
-                }
-            } 
-
-            console.log('isInList = FALSE');
+            console.log('====> results.personInList: ' + result.personInList);
             return setTimeout(readAndWork, 10000);
         });
     });
 
-    /*
-    JobsModel.find({}, function (err, jobs) {
-        if (err) throw new Error(err);
-
-        console.log('GOT JOBS TODO...');
-        console.log('first one is jobs[0]: ' + jobs[0]);
-
-        //for now just use the first model in array
-        var personId = jobs[0].personId,
-            listId   = jobs[0].listId;
-
-        getAllPeopleInAList(listId, function (err, results) {
-            console.log('in getAllPeopleInAList callback');
-            if (err) throw new Error(err);
-
-            var i, people = results.people;
-
-
-            for (i = 0; i < people.length; i++) {
- 
-                //typeof people[i].personId = number
-                //typeof personId = string
-                //=> must parse string to int
-                if (people[i].personId === parseInt(personId, 10)) {
-                    console.log('isInList = TRUE');
-                    return setTimeout(readAndWork, 10000);
-                }
-            } 
-
-            console.log('isInList = FALSE');
-            return setTimeout(readAndWork, 10000);
-        });
-
-        //setTimeout(readAndWork, 5000);
-    });
-    */
 }
 
 
-function getAllPeopleInAList(listId, cb) {
-    var perPage = 100, //seems to be the sweet spot to avoid resp timeouts
-        allPeopleArray = [], //holds all of the people in a list 
+function getAllPeopleInAList(listId, personId, cb) {
+    var perPage = 50, //seems to be the sweet spot to avoid resp timeouts
         totalPages,
         totalNumberOfPeople,
         extraUrls = [],
@@ -138,13 +87,10 @@ function getAllPeopleInAList(listId, cb) {
     	url: firstPageOfPeople,
     	method: 'GET',
     	headers: {
-    	    //'User-Agent': userAgent,
     	    'Content-Type': 'application/json',
     	    'Accept': 'application/json'
      	    }
-        },
-        reducedPeopleArray= []; //holds only person id, first and lastname
-                                // which is sent back 
+        };
 
     
     function callbackForFirstRequest(error, response, body) {
@@ -164,24 +110,18 @@ function getAllPeopleInAList(listId, cb) {
     	console.log('totalPages: ' + totalPages);
     
     	//append individual first page people to peopleArray
-    	for (var i = 0; i < results.length; i++) {
-    	    allPeopleArray.push(results[i]);
-    
-    	    reducedPeopleArray.push({
-    		personId  : results[i].id,
-    		firstName : results[i].first_name,
-    		lastName  : results[i].last_name
-    	    });        
-    	}
     
     	//see if we need to paginate to get all people 
     	if (totalPages === 1) {
     	    //DONT need to paginate
+
+            for (var i = 0; i < results.length; i++) {
+                if (personId === results[i].id) {
+                    return cb(null, {'personInList': true});
+                }
+            }
     	    
-    	    //create and save all the events to mongodb
-    	    //saveAllListsToMongo();
-    
-    	    return cb(null, {'people': reducedPeopleArray});
+    	    return cb(null, {'personInList': false});
     
     	} else {
     	    //DO need to paginate
@@ -197,7 +137,7 @@ function getAllPeopleInAList(listId, cb) {
     	    }
    
     	    //start the heavy lifting to get all the pages concurrently
-    	    downloadAllAsync(extraUrls, successCb, errorCb);                
+    	    downloadAllAsync(extraUrls, personId, successCb, errorCb);                
     	}
     
         } else {
@@ -207,32 +147,9 @@ function getAllPeopleInAList(listId, cb) {
     
     
     function successCb(result) {
-        console.log('successCb called. got all results');
-        //
-        //result is of structure:
-        // result = [    {page:3, ..., results: [{person}, {person}, ..., {person}]},
-        //             , {page:4, ..., results: [{person}, {person}, ..., {person}]}
-        //             , ...
-        //             , {page:8, ..., results: [{person}, {person}, ..., {person}]}
-        //          ];
-        //
+        console.log('successCb called');
     
-        var i, j;
-    
-        //result is an array of arrays wih objects
-        for (i = 0; i < result.length; i++) {
-    	    for (j = 0; j < result[i].results[j].length; j++) {
-                allPeopleArray.push(result[i].results[j]);
-    
-    	        reducedPeopleArray.push({
-    	    	    personId:  result[i].results[j].id,
-    		    firstName: result[i].results[j].first_name,
-    		    lastName:  result[i].results[j].last_name
-    	        });        
-    	    }
-        }
-    
-        return cb(null, {'people': reducedPeopleArray});
+        return cb(null, {'personInList': result});
     }
     
     
@@ -256,30 +173,50 @@ function getAllPeopleInAList(listId, cb) {
 
 
 //HELPER FUNCTION
-function downloadAllAsync(urls, onsuccess, onerror) {
+function downloadAllAsync(urls, personId,  onsuccess, onerror) {
 
     var pending = urls.length;
-    var result = [];
+    var foundId = false;
 
     if (pending === 0) {
-	setTimeout(onsuccess.bind(null, result), 0);
+	setTimeout(onsuccess.bind(null, false), 0);
 	return;
     }
 
     urls.forEach(function (url, i) {
         downloadAsync(url, function (someThingsInAnArray) {
-                if (result) {
-                    result[i] = someThingsInAnArray; //store at fixed index
-        	    pending--;                    //register the success
-                    console.log('pending: ' + pending);
-        	    if (pending === 0) {
-                        onsuccess(result);
-        	    } 
+                //console.log('someThingsInAnArray:');
+                //console.log(someThingsInAnArray);
+                var i, 
+                    someThingsSize = someThingsInAnArray.length;
+
+                if (foundId) return;
+
+                for (i = 0; i < someThingsSize; i ++) {
+                    console.log('typeof someThings...[i]' +typeof someThingsInAnArray[i]);
+                    console.log('typeof personId: ' + typeof personId);
+                    if (someThingsInAnArray[i].id === personId) {
+
+                        foundId = true;
+
+                        onsuccess(true);
+                        return;
+                    }
                 }
+
+       
+                pending--;
+                console.log('pending: ' + pending);
+
+         	if (pending === 0 && !foundId) {
+                    onsuccess(false);
+                    return;
+        	} 
+
+
             }, function (error) {
                 console.log('downloadAsync error function. error: ' + error);
-        	if (result) {
-                    result = null;
+        	if (!foundId) {
         	    onerror(error);
         	}
             });
@@ -291,7 +228,6 @@ function downloadAsync(url_, successCb, errorCb) {
 	url: url_,
 	method: 'GET',
 	headers: {
-	    //'User-Agent': userAgent,
 	    'Content-Type': 'application/json',
 	    'Accept': 'application/json'
 	}
