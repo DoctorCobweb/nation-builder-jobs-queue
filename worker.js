@@ -89,10 +89,10 @@ function handleResult(job, result) {
         postUrl = baseUri + 'api/v1/lists/' + job.listId 
                      + '/listings' + '?access_token=' + NB_ACCESS_TOKEN ;
 
-        //console.log('deleteUrl:');
-        //console.log(deleteUrl);
-        //console.log('postUrl:');
-        //console.log(postUrl);
+        console.log('deleteUrl:');
+        console.log(deleteUrl);
+        console.log('postUrl:');
+        console.log(postUrl);
   
     if(personInList) {
 
@@ -148,7 +148,7 @@ function handleResult(job, result) {
         	    'Content-Type': 'application/json',
         	    'Accept': 'application/json'
         	},
-        	json: postBody,
+        	body: postBody,
             };
         
             function cbPostIndividual(error, response, body) {
