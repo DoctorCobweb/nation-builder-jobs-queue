@@ -58,24 +58,133 @@ function readAndWork () {
         console.log('GOT JOBS TODO FROM QUERY...');
         console.log(jobs);
 
+        //find next job to start on
         //for now just use the first model in array
-        var personId = parseInt(jobs[0].personId, 10),
-            listId   = jobs[0].listId;
+        var job = jobs[0];
+
+        var personId = parseInt(job.personId, 10),
+            listId   = job.listId;
+
 
         getAllPeopleInAList(listId, personId, function (err, result) {
             console.log('in getAllPeopleInAList callback');
             if (err) throw new Error(err);
 
             console.log('====> results.personInList: ' + result.personInList);
+            
+            handleResult(job, result);
+            
             return setTimeout(readAndWork, 10000);
         });
     });
-
 }
 
 
+function handleResult(job, result) {
+    console.log('in handleResult');
+    var personInList = result.personInList,
+        httpMethod = job.httpMethod,
+        deleteUrl =  baseUri + 'api/v1/lists/' + job.listId 
+                     + '/listings/' + job.personId +'?access_token=' + NB_ACCESS_TOKEN,
+        postUrl = baseUri + 'api/v1/lists/' + job.listId 
+                     + '/listings' + '?access_token=' + NB_ACCESS_TOKEN ;
+
+        //console.log('deleteUrl:');
+        //console.log(deleteUrl);
+        //console.log('postUrl:');
+        //console.log(postUrl);
+  
+    if(personInList) {
+
+        if (httpMethod === "post") {
+            return;
+        }
+
+        if (httpMethod === "delete") {
+            //call NB DELETE /lists/:list_id/listings/:person_id 
+
+            var optionsDelete = {
+        	url: deleteUrl,
+        	method: 'DELETE',
+        	headers: {
+        	    'Content-Type': 'application/json',
+        	    'Accept': 'application/json'
+        	}
+            };
+
+            
+        
+            function cbDeleteIndividual(error, response, body) {
+                console.log('cbDeleteIndividual');
+        	if (!error && response.statusCode == 200) {
+        	    var bodyObj = JSON.parse(body);
+        	    return successCb(bodyObj);
+        	} else if (error){
+                    console.log('error in cbDeleteIndividual: ' + error);
+        	    //return errorCb(error);
+        	} else {
+                    console.log('response.statusCode: ' + response.statusCode);
+                    //return succesCb(null);
+        
+                }
+            }
+        
+            //make the call
+            request(optionsDelete, cbDeleteIndividual);
+        }
+
+    } else {
+        //person is NOT in list
+
+        if (httpMethod === "post") {
+            //call NB POST /lists/:list_id/listings/ 
+
+            var postBody = {"listing": {"person_id": job.personId} };
+
+            var optionsPost = {
+        	url: postUrl,
+        	method: 'POST',
+        	headers: {
+        	    'Content-Type': 'application/json',
+        	    'Accept': 'application/json'
+        	},
+        	json: postBody,
+            };
+        
+            function cbPostIndividual(error, response, body) {
+                console.log('cbPostIndividual');
+        	if (!error && response.statusCode == 200) {
+                    console.log('response.statusCode = 200');
+    
+        	    //var bodyObj = JSON.parse(body);
+        	    //return successCb(bodyObj);
+        	} else if (error){
+                    console.log('error in cbPostIndividual: ' + error);
+        	    //return errorCb(error);
+        	} else {
+                    console.log('no error but response.statusCode: ' 
+                                + response.statusCode);
+
+                    //return succesCb(null);
+        
+                }
+            }
+        
+            //make the call 
+            request(optionsPost, cbPostIndividual);
+        }
+
+
+        if (httpMethod === "delete") {
+            return;
+        }
+    }
+}
+
+
+
 function getAllPeopleInAList(listId, personId, cb) {
-    var perPage = 50, //seems to be the sweet spot to avoid resp timeouts
+    var perPage = 100, //seems to be the sweet spot to avoid resp timeouts
         totalPages,
         totalNumberOfPeople,
         extraUrls = [],
@@ -187,6 +296,10 @@ function downloadAllAsync(urls, personId,  onsuccess, onerror) {
         downloadAsync(url, function (someThingsInAnArray) {
                 //console.log('someThingsInAnArray:');
                 //console.log(someThingsInAnArray);
+                if (!someThingsInAnArray) {
+                    console.log('someThingsInAnArray is null');
+                    return;
+                }
                 var i, 
                     someThingsSize = someThingsInAnArray.length;
 
@@ -238,10 +351,14 @@ function downloadAsync(url_, successCb, errorCb) {
 	if (!error && response.statusCode == 200) {
 	    var bodyObj = JSON.parse(body);
 	    return successCb(bodyObj);
-	} else {
+	} else if (error){
             console.log('error in callbackIndividual: ' + error);
 	    return errorCb(error);
-	}
+	} else {
+            console.log('response.statusCode: ' + responseStatusCode);
+            return succesCb(null);
+
+        }
     }
 
     //make a call for an individual page of events 
