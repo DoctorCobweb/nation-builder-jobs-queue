@@ -52,35 +52,56 @@ function readAndWork () {
 
     query.exec(function (err, jobs) {
         console.log('in exec cb');
-
-        if (err) throw new Error(err);
-
         console.log('GOT JOBS TODO FROM QUERY...');
         console.log(jobs);
 
-        //find next job to start on
-        //for now just use the first model in array
-        var job = jobs[0];
+        var job, 
+            j,
+            personId,
+            listId;
 
-        var personId = parseInt(job.personId, 10),
-            listId   = job.listId;
+
+        if (err) throw new Error(err);
+
+
+        //find next job to start on
+        for(j = 0; j < jobs.length; j++) {
+            if (!jobs[j].completed && !jobs[j].inProgress) {
+                job = jobs[j];
+                personId = parseInt(job.personId, 10);
+                listId  = job.listId;
+
+                break;
+            }
+        }
+
+        console.log(job);
 
 
         getAllPeopleInAList(listId, personId, function (err, result) {
             console.log('in getAllPeopleInAList callback');
-            if (err) throw new Error(err);
+            console.log('err');
+            console.log(err);
+            if (err) {
+                 console.log('ERROR:');
+                 console.log(err);
+                 return;
+            } 
 
             console.log('====> results.personInList: ' + result.personInList);
             
-            handleResult(job, result);
-            
-            return setTimeout(readAndWork, 10000);
+            handleResult(job, result, function (err) {
+                if (err) throw new Error(err);
+                console.log('successfully updated job');
+
+                    return setTimeout(readAndWork, 10000);
+            });
         });
     });
 }
 
 
-function handleResult(job, result) {
+function handleResult(job, result, cb) {
     console.log('in handleResult');
     var personInList = result.personInList,
         httpMethod = job.httpMethod,
@@ -89,15 +110,22 @@ function handleResult(job, result) {
         postUrl = baseUri + 'api/v1/lists/' + job.listId 
                      + '/listings' + '?access_token=' + NB_ACCESS_TOKEN ;
 
-        console.log('deleteUrl:');
-        console.log(deleteUrl);
-        console.log('postUrl:');
-        console.log(postUrl);
+        //console.log('deleteUrl:');
+        //console.log(deleteUrl);
+        //console.log('postUrl:');
+        //console.log(postUrl);
   
     if(personInList) {
 
         if (httpMethod === "POST") {
-            return;
+            console.log('no NB call needed => in list and POST method');
+                job.completed = true;
+                job.inProgress= true;
+
+                return JobsModel.save(job, function (error, job) {
+                    if (error) cb(error, null);
+                    cb(null, job);
+                });
         }
 
         if (httpMethod === "DELETE") {
@@ -118,7 +146,7 @@ function handleResult(job, result) {
                 console.log('cbDeleteIndividual');
         	if (!error && response.statusCode == 200) {
         	    var bodyObj = JSON.parse(body);
-        	    return successCb(bodyObj);
+        	    // successCb(bodyObj);
         	} else if (error){
                     console.log('error in cbDeleteIndividual: ' + error);
         	    //return errorCb(error);
@@ -176,7 +204,29 @@ function handleResult(job, result) {
 
 
         if (httpMethod === "DELETE") {
-            return;
+            console.log('no NB call needed => not in list and DELETE method');
+
+
+            //TODO
+            //this is NOT updating!!!
+            JobsModel.update({_id: job._id}
+                             , {completed: true, inProgress: true}
+                             , function (err) {
+                    	          if (err) cb(err);
+                                  console.log('updated job:');
+                                  //console.log(job);
+                    	          cb(null);
+                             });
+
+            /*
+	    job.save(function (error, job) {
+	        if (error) cb(error, null);
+                console.log('updated job:');
+                console.log(job);
+	        cb(null, job);
+	    });
+            */
+
         }
     }
 }
