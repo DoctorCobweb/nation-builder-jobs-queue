@@ -27,13 +27,17 @@ var conn = mongoose.connect(mongoUri, function (err, res) {
 
 var Jobs = new mongoose.Schema(
     {
-        jobType: String,
+        jobType:    String,
         httpMethod: String,
-        personId: Number,
-        listId: Number
+        personId:   Number,
+        listId:     Number,
+        timeAdded:  Date,
+        jobNumber:  Number,
+        completed:  Boolean,
+        inProgress: Boolean
     },
     {
-        capped: 8000000
+        capped: 8000000 //create a capped collection. want tailable cursors
     }
 );
 
@@ -119,13 +123,17 @@ function handleResult(job, result, cb) {
 
         if (httpMethod === "POST") {
             console.log('no NB call needed => in list and POST method');
-                job.completed = true;
-                job.inProgress= false;
 
-                return JobsModel.save(job, function (error, job) {
-                    if (error) cb(error);
-                    cb(null);
-                });
+            JobsModel.update({_id: job._id}
+                             , {completed: true, inProgress: false}
+                             , function (err, number, raw) {
+                    	          if (err) cb(err);
+                                  console.log('updated job:');
+                                  console.log(number);
+                                  console.log('raw:');
+                                  console.log(raw);
+                    	          cb(null);
+                             });
         }
 
         if (httpMethod === "DELETE") {
@@ -145,17 +153,41 @@ function handleResult(job, result, cb) {
             function cbDeleteIndividual(error, response, body) {
                 console.log('cbDeleteIndividual');
         	if (!error && response.statusCode == 200) {
-        	    var bodyObj = JSON.parse(body);
-        	    // successCb(bodyObj);
-                    cb(null);
+        	    //var bodyObj = JSON.parse(body);
+                    JobsModel.update({_id: job._id}
+                                     , {completed: true, inProgress: false}
+                                     , function (err, number, raw) {
+                            	          if (err) cb(err);
+                                          console.log('updated job:');
+                                          console.log(number);
+                                          console.log('raw:');
+                                          console.log(raw);
+                            	          cb(null);
+                                     });
         	} else if (error){
                     console.log('error in cbDeleteIndividual: ' + error);
-                    cb(error);
-        	    //return errorCb(error);
+                    JobsModel.update({_id: job._id}
+                                     , {completed: false, inProgress: false}
+                                     , function (err, number, raw) {
+                            	          if (err) cb(err);
+                                          console.log('updated job:');
+                                          console.log(number);
+                                          console.log('raw:');
+                                          console.log(raw);
+                            	          cb(error);
+                                     });
         	} else {
                     console.log('response.statusCode: ' + response.statusCode);
-                    cb(null);
-                    //return succesCb(null);
+                    JobsModel.update({_id: job._id}
+                                     , {completed: false, inProgress: false}
+                                     , function (err, number, raw) {
+                            	          if (err) cb(err);
+                                          console.log('updated job:');
+                                          console.log(number);
+                                          console.log('raw:');
+                                          console.log(raw);
+                            	          cb(null);
+                                     });
                 }
             }
         
@@ -185,21 +217,43 @@ function handleResult(job, result, cb) {
                 console.log('cbPostIndividual');
         	if (!error && response.statusCode == 200) {
                     console.log('response.statusCode = 200');
-                    cb(null);
-        
-    
-        	    //var bodyObj = JSON.parse(body);
-        	    //return successCb(bodyObj);
+
+                    JobsModel.update({_id: job._id}
+                                     , {completed: true, inProgress: false}
+                                     , function (err, number, raw) {
+                            	          if (err) cb(err);
+                                          console.log('updated job:');
+                                          console.log(number);
+                                          console.log('raw:');
+                                          console.log(raw);
+                            	          cb(null);
+                                     });
+
         	} else if (error){
                     console.log('error in cbPostIndividual: ' + error);
-                    cb(error);
-        	    //return errorCb(error);
+                    JobsModel.update({_id: job._id}
+                                     , {completed: false, inProgress: false}
+                                     , function (err, number, raw) {
+                            	          if (err) cb(err);
+                                          console.log('updated job:');
+                                          console.log(number);
+                                          console.log('raw:');
+                                          console.log(raw);
+                            	          cb(error);
+                                     });
         	} else {
                     console.log('no error but response.statusCode: ' 
                                 + response.statusCode);
-
-                    cb(null);
-                    //return succesCb(null);
+                    JobsModel.update({_id: job._id}
+                                     , {completed: false, inProgress: false}
+                                     , function (err, number, raw) {
+                            	          if (err) cb(err);
+                                          console.log('updated job:');
+                                          console.log(number);
+                                          console.log('raw:');
+                                          console.log(raw);
+                            	          cb(null);
+                                     });
                 }
             }
         
@@ -212,26 +266,16 @@ function handleResult(job, result, cb) {
             console.log('no NB call needed => not in list and DELETE method');
 
 
-            //TODO
-            //this is NOT updating!!!
             JobsModel.update({_id: job._id}
-                             , {completed: true, inProgress: true}
-                             , function (err) {
+                             , {completed: true, inProgress: false}
+                             , function (err, number, raw) {
                     	          if (err) cb(err);
                                   console.log('updated job:');
-                                  //console.log(job);
+                                  console.log(number);
+                                  console.log('raw:');
+                                  console.log(raw);
                     	          cb(null);
                              });
-
-            /*
-	    job.save(function (error, job) {
-	        if (error) cb(error, null);
-                console.log('updated job:');
-                console.log(job);
-	        cb(null, job);
-	    });
-            */
-
         }
     }
 }
