@@ -79,8 +79,6 @@ function readAndWork () {
             }
         }
 
-        console.log(job);
-
 
         getAllPeopleInAList(listId, personId, function (err, result) {
             console.log('in getAllPeopleInAList callback');
