@@ -92,9 +92,9 @@ function readAndWork () {
             
             handleResult(job, result, function (err) {
                 if (err) throw new Error(err);
-                console.log('successfully updated job');
+                console.log('handle result cb');
 
-                    return setTimeout(readAndWork, 10000);
+                return setTimeout(readAndWork, 10000);
             });
         });
     });
@@ -120,11 +120,11 @@ function handleResult(job, result, cb) {
         if (httpMethod === "POST") {
             console.log('no NB call needed => in list and POST method');
                 job.completed = true;
-                job.inProgress= true;
+                job.inProgress= false;
 
                 return JobsModel.save(job, function (error, job) {
-                    if (error) cb(error, null);
-                    cb(null, job);
+                    if (error) cb(error);
+                    cb(null);
                 });
         }
 
@@ -147,13 +147,15 @@ function handleResult(job, result, cb) {
         	if (!error && response.statusCode == 200) {
         	    var bodyObj = JSON.parse(body);
         	    // successCb(bodyObj);
+                    cb(null);
         	} else if (error){
                     console.log('error in cbDeleteIndividual: ' + error);
+                    cb(error);
         	    //return errorCb(error);
         	} else {
                     console.log('response.statusCode: ' + response.statusCode);
+                    cb(null);
                     //return succesCb(null);
-        
                 }
             }
         
@@ -183,18 +185,21 @@ function handleResult(job, result, cb) {
                 console.log('cbPostIndividual');
         	if (!error && response.statusCode == 200) {
                     console.log('response.statusCode = 200');
+                    cb(null);
+        
     
         	    //var bodyObj = JSON.parse(body);
         	    //return successCb(bodyObj);
         	} else if (error){
                     console.log('error in cbPostIndividual: ' + error);
+                    cb(error);
         	    //return errorCb(error);
         	} else {
                     console.log('no error but response.statusCode: ' 
                                 + response.statusCode);
 
+                    cb(null);
                     //return succesCb(null);
-        
                 }
             }
         
